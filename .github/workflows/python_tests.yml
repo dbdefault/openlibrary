@@ -56,9 +56,9 @@ jobs:
       - name: Run tests
         run: |
           git fetch --no-tags --prune --depth=1 origin master
-          # pytest-xdist, one worker per vCPU. "-n auto" would count physical cores (2 of the 4 vCPUs here).
-          echo "vCPUs: $(nproc)"
-          make test-py PYTEST_ARGS=". --doctest-modules -n logical"
+          # pytest-xdist with one worker per physical core: 2 on this 4-vCPU runner. Measured
+          # slower with 4 (-n logical): the hyperthreads add little, and every worker repeats collection.
+          make test-py PYTEST_ARGS=". --doctest-modules -n auto"
       - name: Run integration tests
         timeout-minutes: 5
         # ubuntu-latest has PostgreSQL pre-installed; pg_ctl is at
