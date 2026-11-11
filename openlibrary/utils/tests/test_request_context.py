@@ -150,8 +150,7 @@ def signed_cookie(user_key, secret="secret"):
 @pytest.mark.parametrize(
     ("cookie", "user_key"),
     [(signed_cookie("/people/alice"), "/people/alice"), (signed_cookie("/people/alice", secret="wrong"), None)],
-    # generate_hash uses a random salt, so the generated cookie can't be the test id:
-    # pytest-xdist workers must all collect the same test ids.
+    # The cookies have a random salt, so they can't be the test ids: every xdist worker must collect the same ids.
     ids=["valid-signature", "wrong-secret"],
 )
 def test_visitor_from_session_cookie(monkeypatch, cookie, user_key):

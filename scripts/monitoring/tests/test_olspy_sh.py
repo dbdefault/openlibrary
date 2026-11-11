@@ -42,8 +42,8 @@ root  102  0.0  0.1 100 100 ?   Sl   10:00 0:01 python /openlibrary/scripts/cove
 
 
 def _read_nc_output(path: str) -> str:
-    """olspy.sh sends to nc through `tee >(nc ...)`, which bash doesn't wait for, so the
-    output can land a moment after log_workers_cur_fn returns."""
+    """olspy.sh writes to nc through `tee >(nc ...)`, and bash doesn't wait for that nc,
+    so its output can arrive just after log_workers_cur_fn returns."""
     deadline = time.monotonic() + 10
     while not (text := Path(path).read_text().strip()) and time.monotonic() < deadline:
         time.sleep(0.05)

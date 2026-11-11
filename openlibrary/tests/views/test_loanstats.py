@@ -9,9 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import web
-from pymemcache.test.utils import MockMemcacheClient
 
-from openlibrary.core import cache
 from openlibrary.core.bookshelves import Bookshelves
 from openlibrary.views import loanstats
 
@@ -137,9 +135,6 @@ class TestTrendingNowCaching:
         ]
         mock_get_recent = MagicMock(return_value=fake_books)
         monkeypatch.setattr(Bookshelves, "get_recently_logged_books", mock_get_recent)
-        # A cache of our own: the shared client is built from whatever config is loaded when it is first used, which
-        # can be a real (unreachable) memcached if an earlier test loaded conf/openlibrary.yml.
-        monkeypatch.setattr(cache.memcache_cache, "memcache", MockMemcacheClient())
 
         # First call hits the mock DB
         res1 = loanstats.cached_get_trending_now(limit=99, page=99)

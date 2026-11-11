@@ -33,7 +33,7 @@ class TestTrendingUpdaterInit:
                 "scripts.solr_updater.trending_updater_init.dt.datetime",
                 PatchedDateTime,
             ),
-            # Loading conf/openlibrary.yml would change the process-wide config for every later test.
+            # Loading conf/openlibrary.yml would also set up infobase's server state for the rest of the process
             patch("scripts.solr_updater.trending_updater_init.load_config"),
         ):
             trending_updater_init.main("conf/openlibrary.yml", **main_kwargs)

@@ -184,7 +184,7 @@ def test_affiliate_worker_initializes_context(monkeypatch):
     real_time = affiliate_server.time.time
 
     def stop():
-        # This patches the process-wide time.time, so other live threads (e.g. sentry's monitor) call it too
+        # The patch is process-wide, and other threads (sentry's monitor, for one) call time.time too
         if current_thread() is not thread:
             return real_time()
         observed.put((site.get(), req_context.get()))
