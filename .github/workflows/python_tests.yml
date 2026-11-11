@@ -45,15 +45,22 @@ jobs:
       - name: Run tests
         run: |
           git fetch --no-tags --prune --depth=1 origin master
+          # The integration tests spend most of their time on a PostgreSQL server, so they run
+          # alongside the unit tests on the vCPUs the xdist workers leave idle.
+          # ubuntu-24.04 has PostgreSQL pre-installed; pytest-postgresql finds pg_ctl via pg_config.
+          timeout 300 pytest -m integration openlibrary/tests/core/ > integration.log 2>&1 &
+          integration_pid=$!
           # pytest-xdist with one worker per physical core: 2 on this 4-vCPU runner. Measured
           # slower with 4 (-n logical): the hyperthreads add little, and every worker repeats collection.
-          make test-py PYTEST_ARGS=". --doctest-modules -n auto"
-      - name: Run integration tests
-        timeout-minutes: 5
-        # ubuntu-latest has PostgreSQL pre-installed; pg_ctl is at
-        # /usr/lib/postgresql/*/bin/ (pytest-postgresql finds it via pg_config).
-        run: |
-          pytest -m integration openlibrary/tests/core/
+          unit_status=0
+          make test-py PYTEST_ARGS=". --doctest-modules -n auto" || unit_status=$?
+          integration_status=0
+          wait $integration_pid || integration_status=$?
+          echo "::group::Integration tests (exit $integration_status)"
+          cat integration.log
+          echo "::endgroup::"
+          [ "$integration_status" -eq 0 ] || echo "::error::Integration tests failed (exit $integration_status); see the 'Integration tests' group above"
+          [ "$unit_status" -eq 0 ] && [ "$integration_status" -eq 0 ]
 
   # Runs the i18n checks against the .po files olbase will bake from openlibrary-i18n
   # (via the same script docker/Dockerfile.olbase runs), not the ones committed here.
