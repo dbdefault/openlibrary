@@ -21,6 +21,19 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
+      # Reuse pytest's assertion-rewritten test modules, which every xdist worker otherwise
+      # rebuilds on every run. pytest checks those against a hash of the source, so a stale
+      # entry is never used; CPython's own .pyc files check the source mtime, which a fresh
+      # checkout always changes, so those are recompiled as before.
+      - name: Restore bytecode cache
+        id: pycache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            **/__pycache__
+            !.venv/**
+          key: pycache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: pycache-${{ runner.os }}-
       # setup-uv provides the Python that pyproject.toml's requires-python pins (cached with
       # cache-python) and activates a venv, in place of actions/setup-python plus an
       # actions/cache of its site-packages.
@@ -61,6 +74,14 @@ jobs:
           echo "::endgroup::"
           [ "$integration_status" -eq 0 ] || echo "::error::Integration tests failed (exit $integration_status); see the 'Integration tests' group above"
           [ "$unit_status" -eq 0 ] && [ "$integration_status" -eq 0 ]
+      - name: Save bytecode cache
+        if: steps.pycache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            **/__pycache__
+            !.venv/**
+          key: pycache-${{ runner.os }}-${{ github.sha }}
 
   # Runs the i18n checks against the .po files olbase will bake from openlibrary-i18n
   # (via the same script docker/Dockerfile.olbase runs), not the ones committed here.
