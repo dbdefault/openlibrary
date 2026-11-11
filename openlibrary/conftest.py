@@ -1,5 +1,6 @@
 """pytest configuration for openlibrary"""
 
+import contextvars
 import os
 
 # Tests must behave the same in the dev container as in CI, so drop the
@@ -10,6 +11,7 @@ os.environ.pop("OL_DEPLOYMENT_NAME", None)
 
 import pytest
 import web
+from _pytest.runner import runtestprotocol
 
 from infogami import config
 from infogami.infobase.tests.pytest_wildcard import Wildcard
@@ -26,6 +28,22 @@ from openlibrary.mocks.mock_memcache import (
     mock_memcache,  # noqa: F401 side effects may be needed
 )
 from openlibrary.utils.request_context import RequestContextVars, req_context
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_protocol(item, nextitem):
+    """Run each test (setup, call and teardown) in its own copy of the contextvars context.
+
+    The request ContextVars (site, req_context, visitor, ...) are set by app code that tests
+    drive (web.py processors, FastAPI middleware) and by tests themselves, often without a
+    reset. Left alone, those values leak into whichever test runs next, so tests pass or
+    fail depending on order -- which pytest-xdist changes from run to run.
+    This is pytest's own pytest_runtest_protocol, run inside a fresh context copy.
+    """
+    item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
+    contextvars.copy_context().run(runtestprotocol, item, nextitem=nextitem)
+    item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
+    return True
 
 
 @pytest.fixture(autouse=True)
